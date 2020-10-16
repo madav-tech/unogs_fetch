@@ -16,5 +16,6 @@ results = r.json()
 with open("title_dump.json", 'w') as f:
     f.write(json.dumps(results, indent = 2))
 
-# with open("name_list.txt", 'w') as f:
-#     for entry in results["results"]:
+with open("name_list.txt", 'w') as f:
+    for entry in results["results"]:
+        f.write("title: " + str(entry["title"].encode('ascii','ignore'))[1:] + "\n")
