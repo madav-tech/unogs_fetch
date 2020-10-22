@@ -1,13 +1,24 @@
 import requests
-from bs4 import BeautifulSoup as BS
 import json
+import time
 
-def get_json():
-    query = {"limit": 1, "offset": 0, "countrylist": 336, "country_andorunique": "or", "start_year": 1900, "end_year": 2020, "end_rating": 10, "audiosubtitle_andor": "or"}
+def get_json(title_type = ""):
+    query = {
+            "limit": 1,
+            "offset": 0,
+            "countrylist": 336, ## Israel code (for some reason)
+            "country_andorunique": "or",
+            "start_year": 1900,
+            "end_year": 2020,
+            "end_rating": 10,
+            "audiosubtitle_andor": "or",
+            "type": title_type
+            }
     head =  {
             'Referer': 'http://unogs.com/search/?country_andorunique=or&start_year=1900&end_year=2020&end_rating=10&genrelist=&audiosubtitle_andor=or&countrylist=336',
             'REFERRER': 'http://unogs.com'
             }
+
 
     r = requests.get("http://unogs.com/api/search", params = query, headers = head)
 
@@ -19,17 +30,52 @@ def get_json():
 
     return r.json()
 
-def main():
-    results = get_json()
+
+
+def get_country_data(nfid):
+
+    r = requests.get("http://unogs.com/api/title/countries", params = {"netflixid": nfid})
+    # time.sleep(0.1)
+    return r.json()
+
+
+
+def missing_seasons():
+    results = get_json(title_type = "Series")["results"]
+    missing = {}
+    for item in results:
+        print(f"\rtitle: {item['title']}", flush = True)
+        country_data = get_country_data(item["nfid"])
+        
+        for country in country_data:
+            if country["id"] == 336:
+                season_str = country["seasdet"]
+                i_season_list = [season[1] for season in season_str.split(',')] ## ['1', '2', ...]
+        
+        for country in country_data:
+            c_season_list = [season[1] for season in country["seasdet"].split(',')] ## ['1', '2', ...]
+            for season_number in c_season_list:
+                if season_number not in i_season_list:
+                    if item["title"] not in missing:
+                        missing[item["title"]] = {}
+                    missing[item["title"]][country["country"]] = c_season_list
+    
+    return missing
+
+
+
+def update_dump():
+    results = get_json(title_type = "Series")
     ## Printing full json to file
     with open("title_dump.json", 'w') as f:
         f.write(json.dumps(results, indent = 2))
 
-    ## Printing title list to file
-    with open("name_list.txt", 'w') as f:
-        for entry in results["results"]:
-            f.write("title: " + str(entry["title"].encode('ascii','ignore'))[1:] + "\n")
 
+def main():
+
+    missing = missing_seasons()
+    with open("missing_israel_seasons.json", 'w') as f:
+        f.write(json.dumps(missing, indent = 2))
 
 if __name__ == "__main__":
     main()
