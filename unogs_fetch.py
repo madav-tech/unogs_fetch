@@ -38,7 +38,13 @@ def get_country_data(nfid):
     # time.sleep(0.1)
     return r.json()
 
-
+def get_genres(genre):
+    head =  {
+            'Referer': 'http://unogs.com',
+            'REFERRER': 'http://unogs.com'
+            }
+    r = requests.get("http://unogs.com/api/select/genre",params = {"q": genre}, headers = head)
+    return r.json()
 
 def missing_seasons():
     results = get_json(title_type = "Series")["results"]
@@ -71,11 +77,29 @@ def update_dump():
         f.write(json.dumps(results, indent = 2))
 
 
-def main():
+def pick_genre():
+    gen = input("Enter a genre query: ")
+    print("Fetching matching genres...")
+    genre_json = get_genres(gen)
+    genre_list = [element["text"] for element in genre_json]
 
-    missing = missing_seasons()
-    with open("missing_israel_seasons.json", 'w') as f:
-        f.write(json.dumps(missing, indent = 2))
+    while genre_list == []:
+        gen = input("No genres found, please enter a new genre query: ")
+        genre_json = get_genres(gen)
+        genre_list = [element["text"] for element in genre_json]
+
+    for genre in genre_list:
+        print(genre)
+
+    gen = input("Please pick one of the genres from the list above: ")
+    while gen.lower() not in [genre.lower() for genre in genre_list]:
+        gen = input("Genre not in list, please pick again: ")
+    print(gen) #### DOESN'T DO ANYTHING RIGHT NOW
+
+
+
+def main():
+    pick_genre()
 
 if __name__ == "__main__":
     main()
