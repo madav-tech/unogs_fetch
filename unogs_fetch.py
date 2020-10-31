@@ -1,6 +1,19 @@
 import requests
 import json
 import time
+import html.parser as HP
+
+
+class colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 def get_json(title_type = ""):
     query = {
@@ -28,14 +41,19 @@ def get_json(title_type = ""):
 
     r = requests.get("http://unogs.com/api/search", params = query, headers = head)
 
-    return r.json()
+    results = r.json()
+    for item in results["results"]:
+        item["title"] = HP.unescape(item["title"])
+        item["synopsis"] = HP.unescape(item["synopsis"])
+    
+    return results
+
 
 
 
 def get_country_data(nfid):
 
     r = requests.get("http://unogs.com/api/title/countries", params = {"netflixid": nfid})
-    # time.sleep(0.1)
     return r.json()
 
 def get_genres(genre):
@@ -49,8 +67,10 @@ def get_genres(genre):
 def missing_seasons():
     results = get_json(title_type = "Series")["results"]
     missing = {}
+    last_title = ""
     for item in results:
-        print(f"\rtitle: {item['title']}", flush = True)
+        print(f"title: {item['title']}", end = f"{' ' * (len(last_title) - len(item['title']))}\r")
+        last_title = item["title"]
         country_data = get_country_data(item["nfid"])
         
         for country in country_data:
@@ -64,10 +84,21 @@ def missing_seasons():
                 if season_number not in i_season_list:
                     if item["title"] not in missing:
                         missing[item["title"]] = {}
+                        print(f"{colors.OKCYAN}\'{item['title']}\' has missing seasons!{colors.ENDC}")
+                    missing[item["title"]]["israel"] = i_season_list
                     missing[item["title"]][country["country"]] = c_season_list
     
     return missing
 
+def print_mising_seasons():
+    print("Fetching missing seasons (this may take a while)... ")
+    missing_json = missing_seasons()
+    for title in missing_json:
+        print(f"{colors.OKGREEN}For title '{title}'': {colors.ENDC}")
+        print(f"{colors.OKBLUE}Seasons available in Israel: {', '.join(missing_json[title]['israel'])}{colors.ENDC}")
+        for country in missing_json[title]:
+            if country != "israel":
+                print(f"Seasons available in {country}: {', '.join(missing_json[title][country])}")
 
 
 def update_dump():
@@ -84,7 +115,7 @@ def pick_genre():
     genre_list = [element["text"] for element in genre_json]
 
     while genre_list == []:
-        gen = input("No genres found, please enter a new genre query: ")
+        gen = input(f"{colors.WARNING}No genres found, please enter a new genre query: {colors.ENDC}")
         genre_json = get_genres(gen)
         genre_list = [element["text"] for element in genre_json]
 
@@ -93,13 +124,13 @@ def pick_genre():
 
     gen = input("Please pick one of the genres from the list above: ")
     while gen.lower() not in [genre.lower() for genre in genre_list]:
-        gen = input("Genre not in list, please pick again: ")
+        gen = input(f"{colors.WARNING}Genre not in list, please pick again: {colors.ENDC}")
     print(gen) #### DOESN'T DO ANYTHING RIGHT NOW
 
 
 
 def main():
-    pick_genre()
+    print_mising_seasons()
 
 if __name__ == "__main__":
     main()
