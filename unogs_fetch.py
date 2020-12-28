@@ -2,6 +2,8 @@ import requests
 import json
 import time
 import html.parser as HP
+import random
+import webbrowser as wb
 
 
 class colors:
@@ -128,9 +130,24 @@ def pick_genre():
     print(gen) #### DOESN'T DO ANYTHING RIGHT NOW
 
 
+def get_random_title():
+    results = get_json()
+    return random.choice(results["results"])
+
+
+def open_random_title():
+    rand_title = get_random_title()
+    title = rand_title["title"]
+    nfid = rand_title["nfid"]
+    for i in range(3, 0, -1):
+        print(f"\rYour random title is: '{title}'. Opening in {i} seconds...", end = "")
+        time.sleep(1)
+    print("")
+    wb.open(f"https://www.netflix.com/title/{nfid}")
+
 
 def main():
-    print_mising_seasons()
+    open_random_title()
 
 if __name__ == "__main__":
     main()
